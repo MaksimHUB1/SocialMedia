@@ -1,18 +1,40 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User, auth
 from django.contrib import messages
-from .models import Profile
+from django.urls import reverse_lazy
+from django.shortcuts import get_object_or_404
+
+from .models import Profile, Post
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 # Create your views here.
 
 
-@login_required(login_url='signin')
+@login_required(login_url=reverse_lazy('signin'))
 def index(request):
-    return render(request, 'index.html')
+    user_object = get_object_or_404(User, username=request.user.username)
+    user_profile = get_object_or_404(Profile, user=user_object)
+
+    posts = Post.objects.all()
+    return render(request, 'index.html', {'user_profile': user_profile, 'posts': posts})
 
 
-@login_required(login_url='signin')
+@login_required(login_url=reverse_lazy('signin'))
+def upload(request):
+
+    if request.method == 'POST':
+        user = request.user.username
+        image = request.FILES.get('image_upload')
+        caption = request.POST['caption']
+
+        new_post = Post.objects.create(user=user, image=image, caption=caption)
+        new_post.save()
+        return redirect('/')
+    else:
+        return redirect('/')
+
+
+@login_required(login_url=reverse_lazy('signin'))
 def settings(request):
     user_profile = Profile.objects.get(user=request.user)
 
@@ -95,7 +117,8 @@ def signin(request):
     else:
         return render(request, 'signin.html')
 
-@login_required(login_url='signin')
+
+@login_required(login_url=reverse_lazy('signin'))
 def logout(request):
     auth.logout(request)
     return redirect('signin')
